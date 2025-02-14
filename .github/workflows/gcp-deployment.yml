@@ -31,6 +31,18 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
+        
+      - name: Upload tfvars
+        run: echo "project_id=${{ inputs.project_id }}" > terraform.tfvars
+        run: echo "region=${{ inputs.region }}" >> terraform.tfvars
+        run: echo "cluster_name=${{ inputs.cluster_name }}" >> terraform.tfvars
+        run: echo "database_name=${{ inputs.database_name }}" >> terraform.tfvars
+        run: echo "environment=${{ inputs.environment }}" >> terraform.tfvars
+        uses: actions/upload-artifact@v3
+        with:
+          name: terraform-vars
+          path: terraform.tfvars
+      
       
       - name: Download tfvars
         uses: actions/download-artifact@v4
