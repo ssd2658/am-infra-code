@@ -15,7 +15,7 @@ on:
 
       project_id:
         description: 'Project/Subscription ID'
-        required: true
+        required: false
         type: string
 
       region:
@@ -92,20 +92,20 @@ jobs:
       DB_ADMIN_PASSWORD: ${{ secrets.DB_ADMIN_PASSWORD }}
       SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
 
-  azure-deployment:
-    name: Deploy to Azure
-    needs: determine-providers
-    if: contains(fromJson(needs.determine-providers.outputs.providers), 'azure')
-    uses: ./.github/workflows/azure-deployment.yml
-    with:
-      project_id: ${{ github.event.inputs.project_id || env.DEFAULT_AZURE_SUBSCRIPTION_ID }}
-      region: ${{ github.event.inputs.region || 'eastus' }}
-      cluster_name: ${{ github.event.inputs.cluster_name || format('{0}-{1}-azure', 'portfolio', github.event.inputs.environment || 'preprod') }}
-      database_name: ${{ github.event.inputs.database_name || format('{0}-{1}-azure-db', 'portfolio', github.event.inputs.environment || 'preprod') }}
-      environment: ${{ github.event.inputs.environment || 'preprod' }}
-    secrets:
-      DB_ADMIN_PASSWORD: ${{ secrets.DB_ADMIN_PASSWORD }}
-      SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+  # azure-deployment:
+  #   name: Deploy to Azure
+  #   needs: determine-providers
+  #   if: contains(fromJson(needs.determine-providers.outputs.providers), 'azure')
+  #   uses: ./.github/workflows/azure-deployment.yml
+  #   with:
+  #     project_id: ${{ github.event.inputs.project_id || env.DEFAULT_AZURE_SUBSCRIPTION_ID }}
+  #     region: ${{ github.event.inputs.region || 'eastus' }}
+  #     cluster_name: ${{ github.event.inputs.cluster_name || format('{0}-{1}-azure', 'portfolio', github.event.inputs.environment || 'preprod') }}
+  #     database_name: ${{ github.event.inputs.database_name || format('{0}-{1}-azure-db', 'portfolio', github.event.inputs.environment || 'preprod') }}
+  #     environment: ${{ github.event.inputs.environment || 'preprod' }}
+  #   secrets:
+  #     DB_ADMIN_PASSWORD: ${{ secrets.DB_ADMIN_PASSWORD }}
+  #     SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
 
   validate-input:
     name: Validate Deployment Input
