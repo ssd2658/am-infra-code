@@ -35,6 +35,22 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.PAT }}
+        
+      - name: Upload tfvars
+        run: | 
+          echo "project_id=${{ inputs.project_id }}" > terraform.tfvars
+          echo "region=${{ inputs.region }}" >> terraform.tfvars
+          echo "cluster_name=${{ inputs.cluster_name }}" >> terraform.tfvars
+          echo "database_name=${{ inputs.database_name }}" >> terraform.tfvars
+          echo "environment=${{ inputs.environment }}" >> terraform.tfvars
+      - name: Upload tfvars artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-vars
+          path: terraform.tfvars
+      
       
       - name: Download tfvars
         uses: actions/download-artifact@v4
@@ -62,8 +78,9 @@ jobs:
         uses: google-github-actions/auth@v1
         with:
           project_id: ${{ inputs.project_id }}
-          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
+          workload_identity_provider: projects/${{ secrets.GCP_PROJECT_NUMBER }}/locations/global/workloadIdentityPools/${{ secrets.GCP_POOL_ID }}/providers/github-provider
+          service_account: github-actions-sa@supple-student-446218-f7.iam.gserviceaccount.com
+          subject: ${{ secrets.GCP_SUBJECT }}
       
       - name: Terraform Init
         run: terraform init -input=false
