@@ -136,7 +136,7 @@ jobs:
     needs:
       - validate-input
       - gcp-deployment
-      - azure-deployment
+      #- azure-deployment
     runs-on: ubuntu-latest
     if: always()
     steps:
