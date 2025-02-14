@@ -1,20 +1,6 @@
 name: Terraform Infrastructure Deployment Router
 
 on:
-  push:
-    branches:
-      - main
-      - develop
-    paths:
-      - '**.tf'
-      - '.github/workflows/terraform.yml'
-  pull_request:
-    branches:
-      - main
-      - develop
-    paths:
-      - '**.tf'
-      - '.github/workflows/terraform.yml'
   workflow_dispatch:
     inputs:
       cloud_provider:
@@ -75,30 +61,25 @@ jobs:
         id: set-providers
         shell: bash
         run: |
-          # Determine providers based on input or event type
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            case "${{ github.event.inputs.cloud_provider }}" in
-              "both")
-                echo "providers=['gcp', 'azure']" >> $GITHUB_OUTPUT
-                ;;
-              "gcp")
-                echo "providers=['gcp']" >> $GITHUB_OUTPUT
-                ;;
-              "azure")
-                echo "providers=['azure']" >> $GITHUB_OUTPUT
-                ;;
-              *)
-                echo "providers=['gcp']" >> $GITHUB_OUTPUT
-                ;;
-            esac
-          else
-            # Default to GCP for push/PR events
-            echo "providers=['gcp']" >> $GITHUB_OUTPUT
-          fi
+          case "${{ github.event.inputs.cloud_provider }}" in
+            "both")
+              echo "providers=['gcp', 'azure']" >> $GITHUB_OUTPUT
+              ;;
+            "gcp")
+              echo "providers=['gcp']" >> $GITHUB_OUTPUT
+              ;;
+            "azure")
+              echo "providers=['azure']" >> $GITHUB_OUTPUT
+              ;;
+            *)
+              echo "providers=[]" >> $GITHUB_OUTPUT
+              ;;
+          esac
 
   deploy-infrastructure:
     name: Deploy to ${{ matrix.provider }}
     needs: determine-providers
+    if: needs.determine-providers.outputs.providers != '[]'
     strategy:
       matrix:
         provider: ${{ fromJson(needs.determine-providers.outputs.providers) }}
@@ -132,10 +113,26 @@ jobs:
       DB_ADMIN_PASSWORD: ${{ secrets.DB_ADMIN_PASSWORD }}
       SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
 
+  validate-input:
+    name: Validate Deployment Input
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Check Input Validity
+        run: |
+          providers='${{ needs.determine-providers.outputs.providers }}'
+          if [[ "$providers" == '[]' ]]; then
+            echo "Error: No valid cloud providers selected"
+            exit 1
+          else
+            echo "Deploying to providers: $providers"
+          fi
+
   final-status:
     name: Deployment Status
     needs: 
       - determine-providers
+      - validate-input
       - deploy-infrastructure
     runs-on: ubuntu-latest
     if: always()
