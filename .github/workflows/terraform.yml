@@ -57,6 +57,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       providers: ${{ steps.set-providers.outputs.providers }}
+      default_gcp_project: ${{ steps.set-default-project.outputs.default_gcp_project }}
     steps:
       - name: Set Providers to Deploy
         id: set-providers
@@ -77,13 +78,21 @@ jobs:
               ;;
           esac
 
+      - name: Set Default GCP Project
+        id: set-default-project
+        run: |
+          default_project="${{ github.event.inputs.project_id || secrets.DEFAULT_GCP_PROJECT }}"
+          echo "default_gcp_project=$default_project" >> $GITHUB_OUTPUT
+
+   
+
   gcp-deployment:
     name: Deploy to GCP
     needs: determine-providers
     if: contains(fromJson(needs.determine-providers.outputs.providers), 'gcp')
     uses: ./.github/workflows/gcp-deployment.yml
     with:
-      project_id: ${{ github.event.inputs.project_id || env.DEFAULT_GCP_PROJECT }}
+      project_id: ${{ needs.determine-providers.outputs.default_gcp_project }}
       region: ${{ github.event.inputs.region || 'us-central1' }}
       cluster_name: ${{ github.event.inputs.cluster_name || format('{0}-{1}-gcp', 'portfolio', github.event.inputs.environment || 'preprod') }}
       database_name: ${{ github.event.inputs.database_name || format('{0}-{1}-gcp-db', 'portfolio', github.event.inputs.environment || 'preprod') }}
