@@ -2,10 +2,11 @@
 variable "cloud_provider" {
   description = "Cloud provider to use (gcp or azure)"
   type        = string
-  validation {
-    condition     = contains(["gcp", "azure"], var.cloud_provider)
-    error_message = "Cloud provider must be either 'gcp' or 'azure'."
-  }
+  default  = "gcp"
+  #validation {
+  #  condition     = contains(["gcp", "azure"], var.cloud_provider)
+  #  error_message = "Cloud provider must be either 'gcp' or 'azure'."
+  #}
 }
 
 # Common Variables
