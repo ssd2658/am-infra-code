@@ -88,20 +88,20 @@ module "database" {
 }
 
 # Outputs
-output "cluster_name" {
+output "cluster_name_o" {
   value = module.kubernetes.cluster_name
 }
 
-output "database_name" {
+output "database_name_o" {
   value = module.database.database_name
 }
 
-output "cluster_endpoint" {
+output "cluster_endpoint_o" {
   value     = module.kubernetes.cluster_endpoint
   sensitive = true
 }
 
-output "database_endpoint" {
+output "database_endpoint_o" {
   value     = module.database.database_endpoint
   sensitive = true
 }
