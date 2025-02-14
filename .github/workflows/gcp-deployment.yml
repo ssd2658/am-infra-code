@@ -45,6 +45,7 @@ jobs:
           echo "cluster_name=${{ inputs.cluster_name }}" >> terraform.tfvars
           echo "database_name=${{ inputs.database_name }}" >> terraform.tfvars
           echo "environment=${{ inputs.environment }}" >> terraform.tfvars
+          echo "cloud_provider=${{ inputs.cloud_provider }}" >> terraform.tfvars
       - name: Upload tfvars artifact
         uses: actions/upload-artifact@v4
         with:
