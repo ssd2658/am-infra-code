@@ -1,102 +1,53 @@
 name: GCP Terraform Deployment
 
 on:
-  push:
-    branches:
-      - main
-      - develop
-    paths:
-      - '**.tf'
-      - '.github/workflows/gcp-deployment.yml'
-  pull_request:
-    branches:
-      - main
-      - develop
-    paths:
-      - '**.tf'
-      - '.github/workflows/gcp-deployment.yml'
-  workflow_dispatch:
+  workflow_call:
     inputs:
       project_id:
-        description: 'GCP Project ID'
         required: true
         type: string
       region:
-        description: 'GCP Region'
         required: true
-        default: 'us-central1'
         type: string
       cluster_name:
-        description: 'Kubernetes Cluster Name'
         required: true
-        default: 'portfolio-cluster'
         type: string
       database_name:
-        description: 'Database Name'
         required: true
-        default: 'portfolio-database'
         type: string
       environment:
-        description: 'Deployment Environment'
         required: true
-        default: 'preprod'
-        type: choice
-        options:
-          - dev
-          - preprod
-          - prod
+        type: string
+    secrets:
+      DB_ADMIN_PASSWORD:
+        required: true
+      SLACK_WEBHOOK:
+        required: false
 
 jobs:
   terraform-gcp:
     name: Terraform GCP Deployment
-    uses: ./.github/workflows/common.yml
-    with:
-      cloud_provider: gcp
-      project_id: ${{ 
-        github.event.inputs.project_id || 
-        (github.event_name == 'push' && secrets.DEFAULT_GCP_PROJECT) 
-      }}
-      region: ${{ github.event.inputs.region || 'us-central1' }}
-      cluster_name: ${{ 
-        github.event.inputs.cluster_name || 
-        format('{0}-{1}', 'portfolio', github.event.inputs.environment || 'preprod') 
-      }}
-      database_name: ${{ 
-        github.event.inputs.database_name || 
-        format('{0}-{1}-db', 'portfolio', github.event.inputs.environment || 'preprod') 
-      }}
-      environment: ${{ github.event.inputs.environment || 'preprod' }}
-    secrets:
-      DB_ADMIN_PASSWORD: ${{ secrets.DB_ADMIN_PASSWORD }}
-      SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-
-  cloud-provider-deployment:
-    name: GCP Cloud Deployment
-    needs: terraform-gcp
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
       
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v1
+      - name: Download tfvars
+        uses: actions/download-artifact@v3
         with:
-          project_id: ${{ 
-            github.event.inputs.project_id || 
-            (github.event_name == 'push' && secrets.DEFAULT_GCP_PROJECT) 
-          }}
-          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
+          name: terraform-vars
       
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.5.7
       
-      - name: Download tfvars
-        uses: actions/download-artifact@v3
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
         with:
-          name: terraform-vars
+          project_id: ${{ inputs.project_id }}
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
       
       - name: Terraform Init
         run: terraform init -input=false

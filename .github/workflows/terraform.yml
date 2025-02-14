@@ -12,30 +12,30 @@ on:
           - gcp
           - azure
           - both
-      
+
       project_id:
         description: 'Project/Subscription ID'
         required: true
         type: string
-      
+
       region:
         description: 'Cloud Region'
         required: true
         default: 'us-central1'
         type: string
-      
+
       cluster_name:
         description: 'Kubernetes Cluster Name'
         required: true
         default: 'portfolio-cluster'
         type: string
-      
+
       database_name:
         description: 'Database Name'
         required: true
         default: 'portfolio-database'
         type: string
-      
+
       environment:
         description: 'Deployment Environment'
         required: true
@@ -83,28 +83,11 @@ jobs:
     if: contains(fromJson(needs.determine-providers.outputs.providers), 'gcp')
     uses: ./.github/workflows/gcp-deployment.yml
     with:
-      project_id: ${{ 
-        github.event.inputs.project_id || 
-        env.DEFAULT_GCP_PROJECT 
-      }}
-      
-      region: ${{ 
-        github.event.inputs.region || 
-        'us-central1'
-      }}
-
-      cluster_name: ${{ 
-        github.event.inputs.cluster_name || 
-        format('{0}-{1}-gcp', 'portfolio', github.event.inputs.environment || 'preprod') 
-      }}
-
-      database_name: ${{ 
-        github.event.inputs.database_name || 
-        format('{0}-{1}-gcp-db', 'portfolio', github.event.inputs.environment || 'preprod') 
-      }}
-
+      project_id: ${{ github.event.inputs.project_id || env.DEFAULT_GCP_PROJECT }}
+      region: ${{ github.event.inputs.region || 'us-central1' }}
+      cluster_name: ${{ github.event.inputs.cluster_name || format('{0}-{1}-gcp', 'portfolio', github.event.inputs.environment || 'preprod') }}
+      database_name: ${{ github.event.inputs.database_name || format('{0}-{1}-gcp-db', 'portfolio', github.event.inputs.environment || 'preprod') }}
       environment: ${{ github.event.inputs.environment || 'preprod' }}
-
     secrets:
       DB_ADMIN_PASSWORD: ${{ secrets.DB_ADMIN_PASSWORD }}
       SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
@@ -115,28 +98,11 @@ jobs:
     if: contains(fromJson(needs.determine-providers.outputs.providers), 'azure')
     uses: ./.github/workflows/azure-deployment.yml
     with:
-      project_id: ${{ 
-        github.event.inputs.project_id || 
-        env.DEFAULT_AZURE_SUBSCRIPTION_ID 
-      }}
-      
-      region: ${{ 
-        github.event.inputs.region || 
-        'eastus'
-      }}
-
-      cluster_name: ${{ 
-        github.event.inputs.cluster_name || 
-        format('{0}-{1}-azure', 'portfolio', github.event.inputs.environment || 'preprod') 
-      }}
-
-      database_name: ${{ 
-        github.event.inputs.database_name || 
-        format('{0}-{1}-azure-db', 'portfolio', github.event.inputs.environment || 'preprod') 
-      }}
-
+      project_id: ${{ github.event.inputs.project_id || env.DEFAULT_AZURE_SUBSCRIPTION_ID }}
+      region: ${{ github.event.inputs.region || 'eastus' }}
+      cluster_name: ${{ github.event.inputs.cluster_name || format('{0}-{1}-azure', 'portfolio', github.event.inputs.environment || 'preprod') }}
+      database_name: ${{ github.event.inputs.database_name || format('{0}-{1}-azure-db', 'portfolio', github.event.inputs.environment || 'preprod') }}
       environment: ${{ github.event.inputs.environment || 'preprod' }}
-
     secrets:
       DB_ADMIN_PASSWORD: ${{ secrets.DB_ADMIN_PASSWORD }}
       SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
@@ -158,7 +124,7 @@ jobs:
 
   final-status:
     name: Deployment Status
-    needs: 
+    needs:
       - validate-input
       - gcp-deployment
       - azure-deployment
@@ -169,11 +135,9 @@ jobs:
         run: |
           echo "Providers deployed: ${{ needs.determine-providers.outputs.providers }}"
           
-          # Check deployment status
           gcp_result="${{ needs.gcp-deployment.result }}"
           azure_result="${{ needs.azure-deployment.result }}"
           
-          # Success conditions
           if [[ "$gcp_result" == "success" || "$azure_result" == "success" ]]; then
             echo "Deployment successful"
             exit 0

@@ -1,102 +1,53 @@
 name: Azure Terraform Deployment
 
 on:
-  push:
-    branches:
-      - main
-      - develop
-    paths:
-      - '**.tf'
-      - '.github/workflows/azure-deployment.yml'
-  pull_request:
-    branches:
-      - main
-      - develop
-    paths:
-      - '**.tf'
-      - '.github/workflows/azure-deployment.yml'
-  workflow_dispatch:
+  workflow_call:
     inputs:
       project_id:
-        description: 'Azure Subscription ID'
         required: true
         type: string
       region:
-        description: 'Azure Region'
         required: true
-        default: 'eastus'
         type: string
       cluster_name:
-        description: 'Kubernetes Cluster Name'
         required: true
-        default: 'portfolio-cluster'
         type: string
       database_name:
-        description: 'Database Name'
         required: true
-        default: 'portfolio-database'
         type: string
       environment:
-        description: 'Deployment Environment'
         required: true
-        default: 'preprod'
-        type: choice
-        options:
-          - dev
-          - preprod
-          - prod
+        type: string
+    secrets:
+      DB_ADMIN_PASSWORD:
+        required: true
+      SLACK_WEBHOOK:
+        required: false
 
 jobs:
   terraform-azure:
     name: Terraform Azure Deployment
-    uses: ./.github/workflows/common.yml
-    with:
-      cloud_provider: azure
-      project_id: ${{ 
-        github.event.inputs.project_id || 
-        (github.event_name == 'push' && secrets.DEFAULT_AZURE_SUBSCRIPTION_ID) 
-      }}
-      region: ${{ github.event.inputs.region || 'eastus' }}
-      cluster_name: ${{ 
-        github.event.inputs.cluster_name || 
-        format('{0}-{1}', 'portfolio', github.event.inputs.environment || 'preprod') 
-      }}
-      database_name: ${{ 
-        github.event.inputs.database_name || 
-        format('{0}-{1}-db', 'portfolio', github.event.inputs.environment || 'preprod') 
-      }}
-      environment: ${{ github.event.inputs.environment || 'preprod' }}
-    secrets:
-      DB_ADMIN_PASSWORD: ${{ secrets.DB_ADMIN_PASSWORD }}
-      SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-
-  cloud-provider-deployment:
-    name: Azure Cloud Deployment
-    needs: terraform-azure
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
       
-      - name: Azure Login
-        uses: azure/login@v1
+      - name: Download tfvars
+        uses: actions/download-artifact@v3
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ 
-            github.event.inputs.project_id || 
-            (github.event_name == 'push' && secrets.DEFAULT_AZURE_SUBSCRIPTION_ID) 
-          }}
+          name: terraform-vars
       
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.5.7
       
-      - name: Download tfvars
-        uses: actions/download-artifact@v3
+      - name: Azure Login
+        uses: azure/login@v1
         with:
-          name: terraform-vars
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ inputs.project_id }}
       
       - name: Terraform Init
         run: terraform init -input=false
