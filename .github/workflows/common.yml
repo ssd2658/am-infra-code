@@ -1,0 +1,75 @@
+name: Common Infrastructure Workflow
+
+on:
+  workflow_call:
+    inputs:
+      cloud_provider:
+        required: true
+        type: string
+      project_id:
+        required: true
+        type: string
+      region:
+        required: true
+        type: string
+      cluster_name:
+        required: true
+        type: string
+      database_name:
+        required: true
+        type: string
+      environment:
+        required: true
+        type: string
+    secrets:
+      DB_ADMIN_PASSWORD:
+        required: true
+      SLACK_WEBHOOK:
+        required: false
+
+jobs:
+  generate-tfvars:
+    name: Generate Terraform Variables
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+      
+      - name: Create Dynamic tfvars
+        run: |
+          cat > terraform.tfvars << EOF
+          cloud_provider = "${{ inputs.cloud_provider }}"
+          project_id     = "${{ inputs.project_id }}"
+          region         = "${{ inputs.region }}"
+          cluster_name   = "${{ inputs.cluster_name }}"
+          database_name  = "${{ inputs.database_name }}"
+          admin_username = "dbadmin"
+          admin_password = "${{ secrets.DB_ADMIN_PASSWORD }}"
+          tags = {
+            environment = "${{ inputs.environment }}"
+            managed_by  = "github-actions"
+            project     = "portfolio"
+          }
+          EOF
+          cat terraform.tfvars
+      
+      - name: Upload tfvars
+        uses: actions/upload-artifact@v3
+        with:
+          name: terraform-vars
+          path: terraform.tfvars
+
+  notify:
+    name: Deployment Notification
+    needs: [generate-tfvars]
+    runs-on: ubuntu-latest
+    if: always() && inputs.environment == 'prod'
+    steps:
+    - name: Send Slack Notification
+      if: secrets.SLACK_WEBHOOK
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ job.status }}
+        fields: repo,message,commit,author,action,eventName,ref,workflow
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}

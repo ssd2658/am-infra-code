@@ -1,0 +1,162 @@
+name: Terraform Infrastructure Deployment Router
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - '**.tf'
+      - '.github/workflows/terraform.yml'
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - '**.tf'
+      - '.github/workflows/terraform.yml'
+  workflow_dispatch:
+    inputs:
+      cloud_provider:
+        description: 'Cloud Provider to Deploy'
+        required: true
+        type: choice
+        options:
+          - gcp
+          - azure
+          - both
+      
+      project_id:
+        description: 'Project/Subscription ID'
+        required: true
+        type: string
+      
+      region:
+        description: 'Cloud Region'
+        required: true
+        default: 'us-central1'
+        type: string
+      
+      cluster_name:
+        description: 'Kubernetes Cluster Name'
+        required: true
+        default: 'portfolio-cluster'
+        type: string
+      
+      database_name:
+        description: 'Database Name'
+        required: true
+        default: 'portfolio-database'
+        type: string
+      
+      environment:
+        description: 'Deployment Environment'
+        required: true
+        default: 'preprod'
+        type: choice
+        options:
+          - dev
+          - preprod
+          - prod
+
+# Define default values for secrets
+env:
+  DEFAULT_GCP_PROJECT: ${{ secrets.DEFAULT_GCP_PROJECT || '' }}
+  DEFAULT_AZURE_SUBSCRIPTION_ID: ${{ secrets.DEFAULT_AZURE_SUBSCRIPTION_ID || '' }}
+
+jobs:
+  determine-providers:
+    name: Determine Cloud Providers to Deploy
+    runs-on: ubuntu-latest
+    outputs:
+      providers: ${{ steps.set-providers.outputs.providers }}
+    steps:
+      - name: Set Providers to Deploy
+        id: set-providers
+        shell: bash
+        run: |
+          # Determine providers based on input or event type
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            case "${{ github.event.inputs.cloud_provider }}" in
+              "both")
+                echo "providers=['gcp', 'azure']" >> $GITHUB_OUTPUT
+                ;;
+              "gcp")
+                echo "providers=['gcp']" >> $GITHUB_OUTPUT
+                ;;
+              "azure")
+                echo "providers=['azure']" >> $GITHUB_OUTPUT
+                ;;
+              *)
+                echo "providers=['gcp']" >> $GITHUB_OUTPUT
+                ;;
+            esac
+          else
+            # Default to GCP for push/PR events
+            echo "providers=['gcp']" >> $GITHUB_OUTPUT
+          fi
+
+  deploy-infrastructure:
+    name: Deploy to ${{ matrix.provider }}
+    needs: determine-providers
+    strategy:
+      matrix:
+        provider: ${{ fromJson(needs.determine-providers.outputs.providers) }}
+    uses: ./.github/workflows/${{ matrix.provider }}-deployment.yml
+    with:
+      project_id: ${{ 
+        github.event.inputs.project_id || 
+        (matrix.provider == 'gcp' && env.DEFAULT_GCP_PROJECT) || 
+        (matrix.provider == 'azure' && env.DEFAULT_AZURE_SUBSCRIPTION_ID) 
+      }}
+      
+      region: ${{ 
+        github.event.inputs.region || 
+        (matrix.provider == 'gcp' && 'us-central1') || 
+        (matrix.provider == 'azure' && 'eastus') 
+      }}
+
+      cluster_name: ${{ 
+        github.event.inputs.cluster_name || 
+        format('{0}-{1}-{2}', 'portfolio', matrix.provider, github.event.inputs.environment || 'preprod') 
+      }}
+
+      database_name: ${{ 
+        github.event.inputs.database_name || 
+        format('{0}-{1}-{2}-db', 'portfolio', matrix.provider, github.event.inputs.environment || 'preprod') 
+      }}
+
+      environment: ${{ github.event.inputs.environment || 'preprod' }}
+
+    secrets:
+      DB_ADMIN_PASSWORD: ${{ secrets.DB_ADMIN_PASSWORD }}
+      SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+
+  final-status:
+    name: Deployment Status
+    needs: 
+      - determine-providers
+      - deploy-infrastructure
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Check Deployment Status
+        run: |
+          echo "Providers deployed: ${{ needs.determine-providers.outputs.providers }}"
+          
+          # Check if any deployment failed
+          if [[ "${{ contains(needs.deploy-infrastructure.result, 'failure') }}" == "true" ]]; then
+            echo "Deployment failed for one or more providers"
+            exit 1
+          else
+            echo "All deployments successful"
+          fi
+      
+      - name: Send Comprehensive Notification
+        uses: 8398a7/action-slack@v3
+        if: failure()
+        with:
+          status: ${{ job.status }}
+          fields: repo,message,commit,author,action,eventName,ref,workflow
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}

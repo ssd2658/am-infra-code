@@ -1,0 +1,82 @@
+version: '3.8'
+
+services:
+  terraform:
+    image: hashicorp/terraform:latest
+    volumes:
+      # Mount project directory
+      - ./:/workspace
+      
+      # Mount cloud provider credentials
+      - ~/.config/gcloud:/root/.config/gcloud
+      - ~/.azure:/root/.azure
+    
+    # Working directory inside the container
+    working_dir: /workspace
+    
+    # Default command to keep container running
+    command: sleep infinity
+    
+    # Environment variables for cloud providers
+    environment:
+      # GCP Credentials
+      - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
+      - CLOUDSDK_CORE_PROJECT=${GCP_PROJECT_ID}
+      
+      # Azure Credentials
+      - ARM_SUBSCRIPTION_ID=${AZURE_SUBSCRIPTION_ID}
+      - ARM_TENANT_ID=${AZURE_TENANT_ID}
+      - ARM_CLIENT_ID=${AZURE_CLIENT_ID}
+      - ARM_CLIENT_SECRET=${AZURE_CLIENT_SECRET}
+
+  # Additional service for cloud provider CLIs
+  cloud-tools:
+    image: google/cloud-sdk:latest
+    volumes:
+      # Mount project directory
+      - ./:/workspace
+      
+      # Mount cloud provider credentials
+      - ~/.config/gcloud:/root/.config/gcloud
+      - ~/.azure:/root/.azure
+    
+    # Working directory inside the container
+    working_dir: /workspace
+    
+    # Default command to keep container running
+    command: sleep infinity
+    
+    # Install additional CLIs
+    entrypoint: /bin/bash
+    command: |
+      - apt-get update
+      - apt-get install -y curl unzip
+      - curl -sL https://aka.ms/InstallAzureCLIDeb | bash
+      - az version
+      - gcloud version
+      - terraform version
+
+  # Optional: VSCode-like development environment
+  code-server:
+    image: linuxserver/code-server:latest
+    ports:
+      - "8443:8443"
+    volumes:
+      # Mount project directory
+      - ./:/workspace
+      
+      # Mount cloud provider credentials
+      - ~/.config/gcloud:/root/.config/gcloud
+      - ~/.azure:/root/.azure
+    
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+      - PASSWORD=optional_password  # Change this!
+      - SUDO_PASSWORD=optional_sudo_password  # Change this!
+
+# Optional network configuration
+networks:
+  default:
+    name: infra-network

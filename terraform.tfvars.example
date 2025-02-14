@@ -1,0 +1,22 @@
+# Copy this file to terraform.tfvars and fill in your actual values
+
+# Cloud Provider Configuration
+cloud_provider = "gcp"  # Options: "gcp" or "azure"
+
+# Project/Subscription Details
+project_id = "am-portfolio"
+region     = "us-central1"  # Adjust based on cloud provider
+
+# Cluster Configuration
+cluster_name = "am-portfolio-preprod"
+
+# Database Configuration
+database_name      = "am-portfolio-preprod-db"
+admin_username     = "dbadmin"
+admin_password     = "@M1unish"
+
+# Optional Tags
+# tags = {
+#   environment = "production"
+#   department  = "engineering"
+# }

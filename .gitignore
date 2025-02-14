@@ -1,0 +1,27 @@
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+
+# Environment Files
+.env
+*.env
+
+# Cloud Provider Credentials
+.config/
+*.json
+*credentials*
+
+# IDE Files
+.vscode/
+.idea/
+*.code-workspace
+
+# OS Generated Files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
