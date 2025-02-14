@@ -44,9 +44,13 @@ variable "admin_password" {
   sensitive   = true
 }
 
+locals {
+  kubernetes_module_source = var.cloud_provider == "gcp" ? "./modules/kubernetes/gcp" : "./modules/kubernetes/azure"
+}
+
 # Kubernetes Module
 module "kubernetes" {
-  source = var.cloud_provider == "gcp" ? "./modules/kubernetes/gcp" : "./modules/kubernetes/azure"
+  source = local.kubernetes_module_source
 
   cluster_name = var.cluster_name
   region       = var.region
@@ -58,9 +62,12 @@ module "kubernetes" {
   }
 }
 
+locals {
+  database_module_source = var.cloud_provider == "gcp" ? "./modules/database/gcp" : "./modules/database/azure"
+}
 # Database Module
 module "database" {
-  source = var.cloud_provider == "gcp" ? "./modules/database/gcp" : "./modules/database/azure"
+  source = local.database_module_source
 
   database_name     = var.database_name
   region            = var.region
