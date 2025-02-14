@@ -67,7 +67,7 @@ jobs:
         with:
           project_id: ${{ inputs.project_id }}
           workload_identity_provider: projects/${{ secrets.GCP_PROJECT_NUMBER }}/locations/global/workloadIdentityPools/${{ secrets.GCP_POOL_ID }}/providers/github-provider
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
+          service_account: github-actions-sa@supple-student-446218-f7.iam.gserviceaccount.com
           subject: ${{ secrets.GCP_SUBJECT }}
       
       - name: Terraform Init
