@@ -24,6 +24,7 @@ on:
       SLACK_WEBHOOK:
         required: false
 
+
 jobs:
   terraform-gcp:
     name: Terraform GCP Deployment
