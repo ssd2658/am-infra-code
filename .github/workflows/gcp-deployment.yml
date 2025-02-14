@@ -36,6 +36,12 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: terraform-vars
+          path: .
+      
+      - name: Verify tfvars
+        run: |
+          ls -l terraform.tfvars
+          cat terraform.tfvars
       
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
