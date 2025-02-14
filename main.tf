@@ -45,6 +45,11 @@ variable "admin_password" {
   sensitive   = true
 }
 
+variable "environment" {
+  description = "The environment to deploy to (e.g., preprod, prod)"
+  type        = string
+}
+
 locals {
   kubernetes_module_source = var.cloud_provider == "gcp" ? "./modules/kubernetes/gcp" : "./modules/kubernetes/azure"
 }
@@ -58,7 +63,7 @@ module "kubernetes" {
   project_id   = var.project_id
 
   tags = {
-    environment = "production"
+    environment = var.environment
     managed_by  = "terraform"
   }
 }
@@ -77,7 +82,7 @@ module "database" {
   admin_password    = var.admin_password
 
   tags = {
-    environment = "production"
+    environment = var.environment
     managed_by  = "terraform"
   }
 }
