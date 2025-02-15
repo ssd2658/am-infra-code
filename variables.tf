@@ -1,12 +1,15 @@
+# Cloud Provider Selection
 variable "cloud_provider" {
   description = "Cloud provider to use (gcp or azure)"
   type        = string
-  validation {
-    condition     = contains(["gcp", "azure"], var.cloud_provider)
-    error_message = "Cloud provider must be either 'gcp' or 'azure'."
-  }
+  default  = "gcp"
+  #validation {
+  #  condition     = contains(["gcp", "azure"], var.cloud_provider)
+  #  error_message = "Cloud provider must be either 'gcp' or 'azure'."
+  #}
 }
 
+# Common Variables
 variable "project_id" {
   description = "Project or Subscription ID"
   type        = string
@@ -42,8 +45,7 @@ variable "admin_password" {
   sensitive   = true
 }
 
-variable "tags" {
-  description = "Optional tags to apply to resources"
-  type        = map(string)
-  default     = {}
+variable "environment" {
+  description = "The environment to deploy to (e.g., preprod, prod)"
+  type        = string
 }
