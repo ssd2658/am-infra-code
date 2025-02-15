@@ -107,22 +107,3 @@ module "database_azure" {
     managed_by  = "terraform"
   }
 }
-
-# Outputs
-output "cluster_name" {
-  value = module.kubernetes_gcp.cluster_name
-}
-
-output "database_name" {
-  value = module.database_gcp.database_name
-}
-
-output "cluster_endpoint" {
-  value     = module.kubernetes_gcp.cluster_endpoint
-  sensitive = true
-}
-
-output "database_endpoint" {
-  value     = module.database_gcp.database_endpoint
-  sensitive = true
-}
