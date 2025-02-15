@@ -2,11 +2,7 @@
 variable "cloud_provider" {
   description = "Cloud provider to use (gcp or azure)"
   type        = string
-  default  = "gcp"
-  #validation {
-  #  condition     = contains(["gcp", "azure"], var.cloud_provider)
-  #  error_message = "Cloud provider must be either 'gcp' or 'azure'."
-  #}
+  default     = "gcp"
 }
 
 # Common Variables
@@ -50,14 +46,24 @@ variable "environment" {
   type        = string
 }
 
-locals {
-  kubernetes_module_source = var.cloud_provider == "gcp" ? "./modules/kubernetes/gcp" : "./modules/kubernetes/azure"
-  database_module_source   = var.cloud_provider == "gcp" ? "./modules/database/gcp" : "./modules/database/azure"
+# Kubernetes Module
+module "kubernetes_gcp" {
+  count  = var.cloud_provider == "gcp" ? 1 : 0
+  source = "./modules/kubernetes/gcp"
+
+  cluster_name = var.cluster_name
+  region       = var.region
+  project_id   = var.project_id
+
+  tags = {
+    environment = var.environment
+    managed_by  = "terraform"
+  }
 }
 
-# Kubernetes Module
-module "kubernetes" {
-  source = local.kubernetes_module_source
+module "kubernetes_azure" {
+  count  = var.cloud_provider == "azure" ? 1 : 0
+  source = "./modules/kubernetes/azure"
 
   cluster_name = var.cluster_name
   region       = var.region
@@ -70,8 +76,25 @@ module "kubernetes" {
 }
 
 # Database Module
-module "database" {
-  source = local.database_module_source
+module "database_gcp" {
+  count  = var.cloud_provider == "gcp" ? 1 : 0
+  source = "./modules/database/gcp"
+
+  database_name     = var.database_name
+  region            = var.region
+  project_id        = var.project_id
+  admin_username    = var.admin_username
+  admin_password    = var.admin_password
+
+  tags = {
+    environment = var.environment
+    managed_by  = "terraform"
+  }
+}
+
+module "database_azure" {
+  count  = var.cloud_provider == "azure" ? 1 : 0
+  source = "./modules/database/azure"
 
   database_name     = var.database_name
   region            = var.region
@@ -87,19 +110,19 @@ module "database" {
 
 # Outputs
 output "cluster_name" {
-  value = module.kubernetes.cluster_name
+  value = module.kubernetes_gcp.cluster_name
 }
 
 output "database_name" {
-  value = module.database.database_name
+  value = module.database_gcp.database_name
 }
 
 output "cluster_endpoint" {
-  value     = module.kubernetes.cluster_endpoint
+  value     = module.kubernetes_gcp.cluster_endpoint
   sensitive = true
 }
 
 output "database_endpoint" {
-  value     = module.database.database_endpoint
+  value     = module.database_gcp.database_endpoint
   sensitive = true
 }
